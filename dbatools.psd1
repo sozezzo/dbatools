@@ -11,7 +11,7 @@
     RootModule             = 'dbatools.psm1'
 
     # Version number of this module.
-    ModuleVersion          = '1.1.21'
+    ModuleVersion          = '1.1.20'
 
     # ID used to uniquely identify this module
     GUID                   = '9d139310-ce45-41ce-8e8b-d76335aa1789'
@@ -710,7 +710,8 @@
         'Set-DbaDefaultPath',
         'Remove-DbaDbUdf',
         'Save-DbaCommunitySoftware',
-        'Update-DbaMaintenanceSolution'
+        'Update-DbaMaintenanceSolution',
+		'Install-DbaAuditDDL'
     )
 
     # Cmdlets to export from this module

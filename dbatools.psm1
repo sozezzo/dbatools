@@ -844,7 +844,8 @@ $script:xplat = @(
     'Export-DbaDacPackage',
     'Remove-DbaDbUdf',
     'Save-DbaCommunitySoftware',
-    'Update-DbaMaintenanceSolution'
+    'Update-DbaMaintenanceSolution',
+	'Install-DbaAuditDDL'
 )
 
 $script:noncoresmo = @(
