@@ -103,7 +103,7 @@ END
 		$sqlTableAuditDDLHidden = "EXEC sp_ms_marksystemobject '[dbo].[AuditDDL]';" 
 
         $sqlTableAuditDDLTrigger = "
-IF NOT EXISTS (SELECT 1 FROM sys.triggers WHERE Name = 'tr_AuditDDL_MonitorChange')
+IF NOT EXISTS (SELECT 1 FROM sys.triggers WHERE Name = 'tr_AuditDDL_%')
 BEGIN
 	DECLARE @SQL NVARCHAR(MAX) = '
 --
