@@ -1,7 +1,7 @@
 
 -- SQL Server 2014 Diagnostic Information Queries
 -- Glenn Berry 
--- Last Modified: September 2, 2021
+-- Last Modified: October 11, 2021
 -- https://glennsqlperformance.com/
 -- https://sqlserverperformance.wordpress.com/
 -- YouTube: https://bit.ly/2PkoAM1 
@@ -312,7 +312,8 @@ SELECT ISNULL(d.[name], bs.[database_name]) AS [Database], d.recovery_model_desc
        d.log_reuse_wait_desc AS [Log Reuse Wait Desc],
     MAX(CASE WHEN [type] = 'D' THEN bs.backup_finish_date ELSE NULL END) AS [Last Full Backup],
     MAX(CASE WHEN [type] = 'I' THEN bs.backup_finish_date ELSE NULL END) AS [Last Differential Backup],
-    MAX(CASE WHEN [type] = 'L' THEN bs.backup_finish_date ELSE NULL END) AS [Last Log Backup]
+    MAX(CASE WHEN [type] = 'L' THEN bs.backup_finish_date ELSE NULL END) AS [Last Log Backup],
+	DATABASEPROPERTYEX ((d.[name]), 'LastGoodCheckDbTime') AS [Last Good CheckDB]
 FROM sys.databases AS d WITH (NOLOCK)
 LEFT OUTER JOIN msdb.dbo.backupset AS bs WITH (NOLOCK)
 ON bs.[database_name] = d.[name]
@@ -326,17 +327,12 @@ ORDER BY d.recovery_model_desc, d.[name] OPTION (RECOMPILE);
 
 
 -- Get SQL Server Agent jobs and Category information (Query 10) (SQL Server Agent Jobs)
-SELECT sj.name AS [Job Name], 
-sj.[description] AS [Job Description], 
+SELECT sj.name AS [Job Name], sj.[description] AS [Job Description], 
 sc.name AS [CategoryName], SUSER_SNAME(sj.owner_sid) AS [Job Owner],
 sj.date_created AS [Date Created], sj.[enabled] AS [Job Enabled], 
-sj.notify_email_operator_id, sj.notify_level_email,
-h.run_status,
-    STUFF(STUFF(REPLACE(STR(h.run_duration,7,0),
-        ' ','0'),4,0,':'),7,0,':') AS  [Last Duration - HHMMSS],
-     CONVERT(DATETIME, RTRIM(run_date) + ' '
-        + STUFF(STUFF(REPLACE(STR(RTRIM(h.run_time),6,0),
-        ' ','0'),3,0,':'),6,0,':')) AS [Last Start Date]
+sj.notify_email_operator_id, sj.notify_level_email, h.run_status,
+RIGHT(STUFF(STUFF(REPLACE(STR(h.run_duration, 7, 0), ' ', '0'), 4, 0, ':'), 7, 0, ':'),8) AS [Last Duration - HHMMSS],
+CONVERT(DATETIME, RTRIM(h.run_date) + ' ' + STUFF(STUFF(REPLACE(STR(RTRIM(h.run_time),6,0),' ','0'),3,0,':'),6,0,':')) AS [Last Start Date]
 FROM msdb.dbo.sysjobs AS sj WITH (NOLOCK)
 INNER JOIN
     (SELECT job_id, instance_id = MAX(instance_id)
@@ -1653,7 +1649,8 @@ ORDER BY [BufferCount] DESC OPTION (RECOMPILE);
 
 
 -- Get Schema names, Table names, object size, row counts, and compression status for clustered index or heap  (Query 65) (Table Sizes)
-SELECT SCHEMA_NAME(o.Schema_ID) AS [Schema Name], OBJECT_NAME(p.object_id) AS [Object Name],
+SELECT DB_NAME(DB_ID()) AS [Database Name], SCHEMA_NAME(o.Schema_ID) AS [Schema Name], 
+OBJECT_NAME(p.object_id) AS [Object Name],
 CAST(SUM(ps.reserved_page_count) * 8.0 / 1024 AS DECIMAL(19,2)) AS [Object Size (MB)],
 SUM(p.Rows) AS [Row Count], 
 p.data_compression_desc AS [Compression Type]
@@ -1807,11 +1804,13 @@ ORDER BY s.user_updates DESC OPTION (RECOMPILE);						 -- Order by writes
 
 -- Get lock waits for current database (Query 72) (Lock Waits)
 SELECT o.name AS [table_name], i.name AS [index_name], ios.index_id, ios.partition_number,
-		SUM(ios.row_lock_wait_count) AS [total_row_lock_waits], 
-		SUM(ios.row_lock_wait_in_ms) AS [total_row_lock_wait_in_ms],
-		SUM(ios.page_lock_wait_count) AS [total_page_lock_waits],
-		SUM(ios.page_lock_wait_in_ms) AS [total_page_lock_wait_in_ms],
-		SUM(ios.page_lock_wait_in_ms)+ SUM(row_lock_wait_in_ms) AS [total_lock_wait_in_ms]
+             SUM(ios.row_lock_wait_count) AS [total_row_lock_waits], 
+             SUM(ios.row_lock_wait_in_ms) AS [total_row_lock_wait_in_ms],
+			 SUM(ios.index_lock_promotion_attempt_count) AS [total index_lock_promotion_attempt_count],
+             SUM(ios.index_lock_promotion_count) AS [ios.index_lock_promotion_count],
+             SUM(ios.page_lock_wait_count) AS [total_page_lock_waits],
+             SUM(ios.page_lock_wait_in_ms) AS [total_page_lock_wait_in_ms],
+             SUM(ios.page_lock_wait_in_ms)+ SUM(row_lock_wait_in_ms) AS [total_lock_wait_in_ms]           
 FROM sys.dm_db_index_operational_stats(DB_ID(), NULL, NULL, NULL) AS ios
 INNER JOIN sys.objects AS o WITH (NOLOCK)
 ON ios.[object_id] = o.[object_id]
@@ -1873,6 +1872,18 @@ ORDER BY bs.backup_finish_date DESC OPTION (RECOMPILE);
 -- Are you doing encrypted backups?
 -- Have you done any backup tuning with striped backups, or changing the parameters of the backup command?
 -- Where are the backups going to?
+
+
+-- Get Last Good CheckDB date and time for the current database (Query 75) (Last Good CheckDB)
+SELECT DATABASEPROPERTYEX (DB_NAME(DB_ID()), 'LastGoodCheckDbTime') AS [Last Good CheckDB];
+------
+
+-- The date and time of the last successful DBCC CHECKDB that ran on the current database
+-- If DBCC CHECKDB has not been run on a database, 1900-01-01 00:00:00.000 is returned
+
+-- DATABASEPROPERTYEX (Transact-SQL)
+-- https://bit.ly/3FhvQ41
+
 
 
 -- Microsoft Visual Studio Dev Essentials
