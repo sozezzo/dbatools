@@ -845,6 +845,9 @@ $script:xplat = @(
     'Remove-DbaDbUdf',
     'Save-DbaCommunitySoftware',
     'Update-DbaMaintenanceSolution',
+    'Remove-DbaServerRoleMember',
+    'Remove-DbaDbMailProfile',
+    'Remove-DbaDbMailAccount',	
 	'Install-DbaAuditDDL'
 )
 
